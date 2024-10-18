@@ -1,0 +1,14 @@
+name: cl2-final
+channels:
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.12
+  - pytorch=2.5
+  - pip
+  - pandas
+  - numpy
+  - jupyterlab
+  - seaborn
+  - matplotlib
+  - scikit-learn
