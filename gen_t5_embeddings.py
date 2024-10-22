@@ -10,7 +10,7 @@ tokenizer = AutoTokenizer.from_pretrained(checkpoint, trust_remote_code=True)
 model = AutoModel.from_pretrained(checkpoint, trust_remote_code=True).to(device)
 
 # Create generator
-DATASET_PATH = "estimationset"
+DATASET_PATH = "data/stack/estimationset"
 EMBEDDING_PATH = "embeddings/codet5"
 LANGUAGES = ["java", "javascript", "php", "python"]
 
