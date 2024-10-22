@@ -12,3 +12,5 @@ dependencies:
   - seaborn
   - matplotlib
   - scikit-learn
+  - transformers
+  - datasets
