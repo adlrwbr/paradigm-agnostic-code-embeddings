@@ -16,7 +16,7 @@ LANGUAGES = ["java", "javascript", "php", "python"]
 
 def create_dirs() -> None:
     for lang in LANGUAGES:
-        os.makedirs(os.path.join(EMBEDDING_PATH, "codet5", lang))
+        os.makedirs(os.path.join(EMBEDDING_PATH, lang))
 
 def stream_snippets(lang: str):
     lang_path: str = os.path.join(DATASET_PATH, lang)
