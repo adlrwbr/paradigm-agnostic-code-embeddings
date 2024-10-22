@@ -1,6 +1,5 @@
 import argparse
 import os
-from typing import Literal
 
 import torch
 from transformers import AutoModel, AutoTokenizer
@@ -9,7 +8,9 @@ CHECKPOINTS = {
     "codet5": "Salesforce/codet5p-110m-embedding",
     "codellama": "meta-llama/CodeLlama-7b-hf",
 }
-device = "cpu"  # for GPU usage or "cpu" for CPU usage
+DATASET_PATH = "data/stack/estimationset"
+EMBEDDING_PATH = "embeddings"
+LANGUAGES = ["java", "javascript", "php", "python"]
 
 
 def load_model_and_tokenizer(model_type: str, device: str):
@@ -17,12 +18,6 @@ def load_model_and_tokenizer(model_type: str, device: str):
     tokenizer = AutoTokenizer.from_pretrained(checkpoint, trust_remote_code=True)
     model = AutoModel.from_pretrained(checkpoint, trust_remote_code=True).to(device)
     return model, tokenizer
-
-
-# Create generator
-DATASET_PATH = "data/stack/estimationset"
-EMBEDDING_PATH = "embeddings"
-LANGUAGES = ["java", "javascript", "php", "python"]
 
 
 def create_dirs(model_type: str) -> None:
