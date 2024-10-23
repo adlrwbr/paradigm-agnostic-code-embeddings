@@ -2,7 +2,12 @@ import argparse
 import os
 
 import torch
-from transformers import AutoModel, AutoTokenizer
+from dotenv import load_dotenv
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
+from transformers.configuration_utils import Any
+
+load_dotenv()  # load HF_TOKEN from .env
 
 CHECKPOINTS = {
     "codet5": "Salesforce/codet5p-110m-embedding",
@@ -16,7 +21,14 @@ LANGUAGES = ["java", "javascript", "php", "python"]
 def load_model_and_tokenizer(model_type: str, device: str):
     checkpoint = CHECKPOINTS[model_type]
     tokenizer = AutoTokenizer.from_pretrained(checkpoint, trust_remote_code=True)
-    model = AutoModel.from_pretrained(checkpoint, trust_remote_code=True).to(device)
+    model_kwargs: dict[str, Any] = {"trust_remote_code": True}
+    if model_type == "codellama":
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_threshold=6.0,  # adjusts performance for mixed-precision (min 0 = high accuracy)
+            llm_int8_enable_fp32_cpu_offload=True,  # offload operations to CPU if out of vram
+        )
+    model = AutoModel.from_pretrained(checkpoint, **model_kwargs).to(device)
     return model, tokenizer
 
 
@@ -74,6 +86,8 @@ if __name__ == "__main__":
 
     # Generate and save embeddings for each language
     for lang in LANGUAGES:
-        for snippet_path, snippet in stream_snippets(lang):
+        for snippet_path, snippet in tqdm(
+            stream_snippets(lang), desc=f"Embedding {lang} snippets"
+        ):
             embedding = gen_embedding(snippet, model, tokenizer, device)
             save_embedding(snippet_path, embedding, model_type)
