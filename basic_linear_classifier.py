@@ -1,6 +1,11 @@
 import torch
 import argparse
 import matplotlib.pyplot as plt
+import os
+
+LLM = "codebert" 
+LANGUAGES = ["python", "java", "javascript", "php"]
+EMBEDDING_PATH = "embeddings"
 
 class LinearClassifier(torch.nn.Module):
     def __init__(self, input_dim=768, output_dim=4):
@@ -11,38 +16,46 @@ class LinearClassifier(torch.nn.Module):
         x = self.linear(x)
         return x
         
-LLM = "codebert" 
-LANGUAGES = ["python", "java", "javascript", "php"]
+model_path = os.path.join(EMBEDDING_PATH, LLM)
 
-
-def load_embeddings(start_range, end_range, subMeaned=False):
+# makeAgnostic determines whether to modify the vectors to remove language specific elements
+# rank = 0 uses mean embedding, otherwise uses LRD with that rank
+def load_embeddings(start_range, end_range, makeAgnostic=False, rank=0):
     labels = []
     tensors = []
-    mean_tensors = []
-    if subMeaned:
-        for lang in range(0,len(LANGUAGES)):
-            mean_tensors.append(torch.load("embeddings/" + LLM + "/" + LLM + "_mean_" + LANGUAGES[lang] + ".pt", weights_only=True))
-        
+    language_tensors = []
+    if makeAgnostic:
+        for lang in LANGUAGES:
+            if rank==0:
+                language_tensors.append(torch.load("embeddings/" + LLM + "/" + LLM + "_mean_" + lang + ".pt", weights_only=True))
+            else: 
+                mat_path = os.path.join(model_path, LLM + "_LRD" + str(rank) + "_" + lang + ".pt")
+                language_tensors.append(torch.load(mat_path, weights_only=True))
+    
     for i in range(start_range, end_range):
         for lang in range(0,len(LANGUAGES)):
-            embedding = torch.load("embeddings/" + LLM + "/" + LANGUAGES[lang] + "/" + LANGUAGES[lang] + str(i) + ".txt.pt", weights_only=True)
-            if subMeaned:
-                embedding = torch.sub(embedding, mean_tensors[lang])
+            embedding_path = os.path.join(EMBEDDING_PATH, LLM, LANGUAGES[lang], LANGUAGES[lang] + str(i) + ".txt.pt")
+            embedding = torch.load(embedding_path, weights_only=True)
+            if makeAgnostic:
+                if rank == 0:
+                    embedding = torch.sub(embedding, language_tensors[lang])
+                else: 
+                    embedding = torch.matmul(language_tensors[lang], embedding)
             res = [0.0,0.0,0.0,0.0]
             res[lang] = 1.0
             labels.append(res)
             tensors.append(embedding)
     x = torch.stack(tensors)
     y = torch.tensor(labels)
-    if subMeaned:
-        return x, y, mean_tensors
+    if makeAgnostic:
+        return x, y, language_tensors
     return x, y
     
 
 def generate_model(filename=LLM+"LinClass.model", drawFigure=True, epochs=600):
     model = LinearClassifier()
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.02)
             
     x_train, y_train = load_embeddings(1000,2200)
 
@@ -73,54 +86,66 @@ def load_model(filename=LLM + "LinClass.model"):
     return model
 
 def test_model(model):
+    rank = 1
     x_test, labels = load_embeddings(2200,2800)
     res = model.forward(x_test)
     
     x_mod, _, means = load_embeddings(2200,2800, True)
     mod_res = model.forward(x_mod)
     
+    x_lrd, _, agnostic_matrices = load_embeddings(2200,2800, True, rank)
+    lrd_res = model.forward(x_lrd)
+    
     x_subbed = []
     subbed_successes = []
     sub_res = []
+    x_mulled = []
+    mulled_successes = []
+    mulled_predicted = []
+    mul_res = []
     for i in range(len(LANGUAGES)):
         x_subbed.append(torch.sub(x_test, means[i]))
         sub_res.append(model.forward(x_subbed[-1]))
         subbed_successes.append([0,0,0,0])
+        
+        x_mulled.append(torch.matmul(x_test, agnostic_matrices[i]))
+        mul_res.append(model.forward(x_mulled[-1]))
+        mulled_successes.append([0,0,0,0])
+        mulled_predicted.append([0,0,0,0])
     
     label_successes = [0,0,0,0]
     modded_successes = [0,0,0,0]
-    for i in range(len(labels)):
-        if torch.argmax(labels[i]) == torch.argmax(res[i]):
-            label_successes[torch.argmax(res[i])]+=1
-        if torch.argmax(labels[i]) == torch.argmax(mod_res[i]):
-            modded_successes[torch.argmax(mod_res[i])]+=1
-        for j in range(len(LANGUAGES)):
-            if torch.argmax(labels[i]) == torch.argmax(sub_res[j][i]):
-                subbed_successes[j][torch.argmax(labels[i])] += 1
-    #print(label_successes)
-    #print(modded_successes)
+    lrd_successes = [0,0,0,0]
     
-    debug = False
-    if debug:
-        print("  Original:  python  java  JS   PHP")
-        print(" ↓Removed↓ |=======================")
-        print("None       |", end="")
-        print(" " + str(label_successes[0]) + "     " + str(label_successes[1]) +
-             "   " + str(label_successes[2]) + "  " + str(label_successes[3]))
+    for i in range(len(labels)):
+        correct = torch.argmax(labels[i])
+        if correct == torch.argmax(res[i]):
+            label_successes[correct]+=1
+        if correct == torch.argmax(mod_res[i]):
+            modded_successes[correct]+=1
+        if correct == torch.argmax(lrd_res[i]):
+            lrd_successes[correct]+=1
         for j in range(len(LANGUAGES)):
-            print(LANGUAGES[j],end="")
-            for i in range(11-len(LANGUAGES[j])):
-                print(" ",end="")
-            print("|",end="")
-            print(" " + str(subbed_successes[j][0]) + "     " + str(subbed_successes[j][1]) +
-             "   " + str(subbed_successes[j][2]) + "  " + str(subbed_successes[j][3]))
-        print("\n\n")
+            if correct == torch.argmax(sub_res[j][i]):
+                subbed_successes[j][correct] += 1
+            if correct == torch.argmax(mul_res[j][i]):
+                mulled_successes[j][correct] += 1
+            mulled_predicted[j][torch.argmax(mul_res[j][i])]+=1
+         
+    debug = False
+    
+    if debug:
+        print(mulled_predicted)
+        for i in range(0,4):
+            print(mulled_successes[i])
     
     for i in range(0,4):
         label_successes[i] = str(label_successes[i]/600.0)[1:4]
         for j in range(0,4):
             subbed_successes[j][i] = str(subbed_successes[j][i]/600.0)[1:4]
+            mulled_successes[j][i] = str(mulled_successes[j][i]/600.0)[0:4]
     print("Accuracy of Language Classification")
+    print("Centering")
     print("  Original:  python  java  JS   PHP")
     print(" ↓Removed↓ |=======================")
     print("None       |", end="")
@@ -133,6 +158,20 @@ def test_model(model):
         print("|",end="")
         print(" " + str(subbed_successes[j][0]) + "     " + str(subbed_successes[j][1]) +
          "   " + str(subbed_successes[j][2]) + "  " + str(subbed_successes[j][3]))
+    
+    print("LRD, rank " + str(rank))
+    print("  Original:  python  java  JS   PHP")
+    print(" ↓Removed↓ |=======================")
+    print("None       |", end="")
+    print(" " + str(label_successes[0]) + "     " + str(label_successes[1]) +
+         "   " + str(label_successes[2]) + "  " + str(label_successes[3]))
+    for j in range(len(LANGUAGES)):
+        print(LANGUAGES[j],end="")
+        for i in range(11-len(LANGUAGES[j])):
+            print(" ",end="")
+        print("|",end="")
+        print(" " + str(mulled_successes[j][0]) + "     " + str(mulled_successes[j][1]) +
+         "   " + str(mulled_successes[j][2]) + "  " + str(mulled_successes[j][3]))
     
     
     
@@ -157,7 +196,7 @@ if __name__ == "__main__":
         type=str,
         required=True,
         choices=["codebert"],
-        help="The model that sourced the embeddings: codebert, or [Implemented Later]",
+        help="The model that sourced the embeddings: codebert, or [Implement Later]",
     )
 
     args = parser.parse_args()
