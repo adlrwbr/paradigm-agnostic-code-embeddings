@@ -12,6 +12,7 @@ load_dotenv()  # load HF_TOKEN from .env
 CHECKPOINTS = {
     "codet5": "Salesforce/codet5p-110m-embedding",
     "codellama": "meta-llama/CodeLlama-7b-hf",
+    "codebert": "microsoft/codebert-base",
 }
 DATASET_PATH = "data/stack/estimationset"
 EMBEDDING_PATH = "embeddings"
@@ -59,13 +60,13 @@ def save_embedding(snippet_path: str, embedding, model_type: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate embeddings using CodeT5 or CodeLlama"
+        description=f"Generate code embeddings using models relevant to our project"
     )
     parser.add_argument(
         "--model",
         type=str,
         required=True,
-        choices=["codet5", "codellama"],
+        choices=list(CHECKPOINTS.keys()),
         help="The model to use for generating embeddings: codet5 or codellama.",
     )
     parser.add_argument(
@@ -90,4 +91,6 @@ if __name__ == "__main__":
             stream_snippets(lang), desc=f"Embedding {lang} snippets"
         ):
             embedding = gen_embedding(snippet, model, tokenizer, device)
+            if model in ("codellama", "codebert"):
+                embedding = torch.clone(torch.mean(embedding, 0))
             save_embedding(snippet_path, embedding, model_type)
