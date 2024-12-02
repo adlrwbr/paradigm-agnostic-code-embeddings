@@ -5,8 +5,8 @@ def get_sampler(lang):
     ds = load_dataset("bigcode/the-stack", streaming=True, data_dir="data/" + lang, split="train")
     return iter(ds)
     
-langs = ["python","java","javascript","php"]
-
+#langs = ["python","java","javascript","php"]
+langs = ["go", "ruby", "c", "c++", "c-sharp"]
 for lang in langs:
     try:
         os.mkdir(lang)
@@ -23,6 +23,11 @@ exclude["python"] = [2152,2856, 4038]
 exclude["java"] = []
 exclude["javascript"] = [7405]
 exclude["php"] = []
+exclude["ruby"] = [444, 786]
+exclude["go"] = []
+exclude["c"] = []
+exclude["c++"] = []
+exclude["c-sharp"] = []
 
 for lang in langs:
     i = 0
@@ -38,5 +43,5 @@ for lang in langs:
         f.write(sample["content"])
         f.close()
         i += 1
-        if i > 9999:
+        if i > 999:
             break
