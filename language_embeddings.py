@@ -28,32 +28,28 @@ def embeddings_parser():
         "-d", "--device",
         type=str,
         default="cpu",
-        choices=["cpu", "CUDA"],
-        help="TO DO! | device to run torch on",
+        choices=["cpu", "cuda"],
     )
     parser.add_argument(
         "--sourceDevice",
         type=str,
         required=False,
-        choices=["cpu", "CUDA"],
+        choices=["cpu", "cuda"],
         help="Rank of Low Rank Decomposition / Common Specific Low Rank Decomposition",
     )   
     parser.add_argument(
         "--doCentering",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Whether to generate the Centering syntax specific component.",
     )
     parser.add_argument(
         "--doLRD",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Whether to generate the Low Rank Decomposition syntax matrices ",
     )
     parser.add_argument(
         "--doCSLRD",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Whether to generate the Common Specific Low Rank Decomposition syntax matrix.",
     )
     parser.add_argument(
