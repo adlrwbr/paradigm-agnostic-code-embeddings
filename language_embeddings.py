@@ -45,6 +45,10 @@ def embeddings_parser():
         type=str,
         default="cpu",
         choices=["cpu", "cuda"],
+<<<<<<< Updated upstream
+=======
+        help="TO DO! | device to run torch on",
+>>>>>>> Stashed changes
     )
     parser.add_argument(
         "--sourceDevice",

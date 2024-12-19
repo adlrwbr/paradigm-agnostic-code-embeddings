@@ -2,12 +2,12 @@ import argparse
 import os
 
 import torch
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer, BitsAndBytesConfig
 from transformers.configuration_utils import Any
 
-load_dotenv()  # load HF_TOKEN from .env
+# load_dotenv()  # load HF_TOKEN from .env
 
 CHECKPOINTS = {
     "codet5": "Salesforce/codet5p-110m-embedding",

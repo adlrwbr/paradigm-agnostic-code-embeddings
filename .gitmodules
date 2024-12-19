@@ -1,0 +1,6 @@
+[submodule "CodeT5"]
+	path = CodeT5
+	url = https://github.com/salesforce/CodeT5.git
+[submodule "CodeBERT"]
+	path = CodeBERT
+	url = https://github.com/microsoft/CodeBERT.git
