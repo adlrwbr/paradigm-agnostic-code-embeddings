@@ -71,11 +71,15 @@ def load_mean_embed(lang: str, center_method: str):
         return mean_embeddings[lang]
     elif center_method == "LRD":
         return torch.load(f'../embeddings/codet5/codet5_LRD10_{lang}.pt')
+    elif center_method == "CSLRD":
+        return torch.load(f'../embeddings/codet5/codet5_CSLRD3.pt')
 
 @torch.no_grad()
 def contrast_evaluation(text_embeds, code_embeds):
     score_matrix_i2t = text_embeds @ code_embeds.t()
     scores_i2t = score_matrix_i2t.cpu().numpy()
+    
+    print(scores_i2t)
 
     ranks = np.ones(scores_i2t.shape[0]) * -1
     for index, score in enumerate(scores_i2t):
@@ -102,18 +106,25 @@ if __name__ == "__main__":
     # model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to('cuda')
     # model.eval()
 
-    # gen_embeds(model, tokenizer, subsets, 'javascript', 50)
-    # gen_embeds(model, tokenizer, subsets, 'python', 50)
-    # gen_embeds(model, tokenizer, subsets, 'java', 50)
-    # gen_embeds(model, tokenizer, subsets, 'php', 50)
+    # gen_embeds(model, tokenizer, subsets, 'javascript', 300)
+    # gen_embeds(model, tokenizer, subsets, 'python', 300)
+    # gen_embeds(model, tokenizer, subsets, 'java', 300)
+    # gen_embeds(model, tokenizer, subsets, 'php', 300)
 
-    text_embeds, code_embeds = load_embeds('python')
-    text_embeds = text_embeds.view((50, 256))
-    code_embeds = code_embeds.view((50, 256))
+    text_embeds, code_embeds = load_embeds('javascript')
+    text_embeds = text_embeds.view((300, 256))
+    code_embeds = code_embeds.view((300, 256))
 
-    mean_embed = load_mean_embed('python', 'mean').to('cuda')
+    mean_embed = load_mean_embed('javascript', 'CSLRD').to('cuda')
+    centered_embeds = code_embeds - mean_embed
 
-    centered_embeds = code_embeds - mean_embed * 50000
+    text_norms = torch.norm(text_embeds, p=2, dim=1, keepdim=True)
+    code_norms = torch.norm(code_embeds, p=2, dim=1, keepdim=True)
+    center_norms = torch.norm(centered_embeds, p=2, dim=1, keepdim=True)
+
+    text_embeds = text_embeds / text_norms
+    code_embeds = code_embeds / code_norms
+    centered_embeds = centered_embeds / center_norms
 
     print(contrast_evaluation(text_embeds, code_embeds))
     print(contrast_evaluation(text_embeds, centered_embeds))

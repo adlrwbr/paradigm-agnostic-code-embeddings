@@ -48,7 +48,7 @@ def stream_snippets(lang: str):
 
 
 def gen_embedding(source: str, model, tokenizer, device: str):
-    inputs = tokenizer.encode(source, return_tensors="pt").to(device)
+    inputs = tokenizer.encode(source, return_tensors="pt", truncation=True, max_length=512).to(device)
     with torch.no_grad():
         return model(inputs)[0]
 

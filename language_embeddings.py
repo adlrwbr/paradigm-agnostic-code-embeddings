@@ -19,7 +19,7 @@ lang_dict = {
         "c++",
         "c-sharp",
         "go",
-    ],
+    ][:4],
 }
 
 
@@ -45,10 +45,6 @@ def embeddings_parser():
         type=str,
         default="cpu",
         choices=["cpu", "cuda"],
-<<<<<<< Updated upstream
-=======
-        help="TO DO! | device to run torch on",
->>>>>>> Stashed changes
     )
     parser.add_argument(
         "--sourceDevice",
